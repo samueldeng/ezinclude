@@ -1,26 +1,84 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
+'use strict';
 import * as vscode from 'vscode';
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
-	
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "ezinclude" is now active!');
+let getPath = function (args: string | any[]) {
+	let path = null;
+	// trigger from editor/title/context or explorer/context
+	if (args && args.length > 0) {
+		path = args[0].fsPath;
+	}
+	// trigger from CommandPalette
+	if (!path && vscode.window.activeTextEditor) {
+		path = vscode.window.activeTextEditor.document.fileName;
+	}
+	return path;
+};
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('ezinclude.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from ezinclude!');
+let pasteAndShowMessage = function (fileName: string) {
+	vscode.env.clipboard.writeText(fileName);
+	vscode.window.showInformationMessage(`${fileName}" copied!`);
+};
+
+let extractIncludePath = function (filePath: string)
+{
+	// Three Capture Group
+	// eg1. framwork/te/impl_include/biz/te/core/session/impl/abc.h
+	//			G0: framwork/te/impl_include/biz/te/core/session/impl/abc.h
+	// 			G1: framwork/te
+	// 			G2: impl_include
+	// 			G3: biz/te/core/session/impl/abc.h  --> Use this one
+	// eg. framwork/te/include/biz/te/messages/report.h
+	//			G0: framwork/te/include/biz/te/messages/report.h
+	// 			G1: framwork/te
+	// 			G2: include
+	// 			G3: biz/te/messages/report.h  --> Use this one
+	const includePathRegex = new RegExp('(.*)\/(.*include)\/(.*)');
+	const array = filePath.match(includePathRegex);
+
+	if (!array || array.length !== 4)
+	{
+		console.log(`regex match failed, filePath=${filePath}`);
+		return "";
+	}
+
+	const includeRelativePath = array[3];
+	console.log("include_path = " + includeRelativePath);
+	return includeRelativePath;
+};
+export function activate(context: vscode.ExtensionContext) {
+	let disposable = vscode.commands.registerCommand('ezinclude.copyQuotedInclude', (...args) => {
+		var fullPath = getPath(args);
+		console.log(`filePath=${fullPath}`);
+
+		var includeRelativePath = extractIncludePath(fullPath);
+		if (includeRelativePath === "")
+		{
+			vscode.window.showErrorMessage(`find include path failed: ${fullPath}`);
+			return;
+		}
+
+		var includeCopyablePath = `#include "${includeRelativePath}"`;
+		pasteAndShowMessage(includeCopyablePath);
+	});
+
+	context.subscriptions.push(disposable);
+
+	disposable = vscode.commands.registerCommand('ezinclude.copyAngleBracketInclude', (...args) => {
+		var fullPath = getPath(args);
+		console.log(`filePath=${fullPath}`);
+
+		var includeRelativePath = extractIncludePath(fullPath);
+		if (includeRelativePath === "")
+		{
+			vscode.window.showErrorMessage(`find include path failed: ${fullPath}`);
+			return;
+		}
+
+		var includeCopyablePath = `#include <${includeRelativePath}>`;
+		pasteAndShowMessage(includeCopyablePath);
 	});
 
 	context.subscriptions.push(disposable);
 }
 
-// this method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() { }
