@@ -2,11 +2,12 @@
   "name": "ezinclude",
   "displayName": "EzInclude",
   "description": "find include path and copy to clipboard",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "repository": {
 		"type": "git",
 		"url": "https://github.com/samueldeng/ezinclude.git"
 	},
+  "icon": "favicon.ico",
   "publisher": "samueldeng",
   "engines": {
     "vscode": "^1.60.0"
